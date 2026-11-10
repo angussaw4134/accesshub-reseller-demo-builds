@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { accentInk, readBranding } from "./branding";
+import { accentInk, readableColor, readBranding } from "./branding";
 import type { ResellerBranding } from "./branding";
 import { AppleID } from "./AppleID";
 import { Device } from "./Device";
@@ -83,6 +83,11 @@ function App() {
     document.documentElement.style.setProperty("--reseller-accent", brandAccent);
     document.documentElement.style.setProperty("--reseller-bg", brandBackground);
     document.documentElement.style.setProperty("--reseller-ink", accentInk(brandAccent));
+    for (const [property, preferred] of [["--reseller-text", "#fff8f1"], ["--reseller-muted", "#d5c4df"], ["--reseller-highlight", "#e2c6ef"], ["--reseller-link", "#bfdfca"], ["--reseller-status", "#d7f2df"]]) {
+      document.documentElement.style.setProperty(property, readableColor(brandBackground, preferred));
+    }
+    document.documentElement.dataset.brandLight = readableColor(brandBackground) === "#000000" ? "true" : "false";
+
     document.title = brandName + " · Fictional demo";
     void getCurrentWindow().setTitle(brandName + " · DEMO — NOT VALID ID").catch(() => {});
   }, [brandName, brandAccent, brandBackground]);
