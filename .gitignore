@@ -1,0 +1,14 @@
+node_modules/
+dist/
+reseller-native/dist/
+target/
+src-tauri/target/
+*.log
+.env
+.env.*
+*.p12
+*.mobileprovision
+*.jks
+*.keystore
+signing.properties
+.DS_Store

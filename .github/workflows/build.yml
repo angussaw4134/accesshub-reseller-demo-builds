@@ -1,0 +1,30 @@
+name: Build fictional demo applications
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios:
+    name: Fictional demo iOS
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test navigation restrictions
+        run: |
+          swiftc reseller-native/ios/App.swift reseller-native/ios/tests/main.swift -o /tmp/reseller-navigation-tests
+          /tmp/reseller-navigation-tests
+      - name: Build permanently marked demo
+        run: bash reseller-native/build-ios.sh
+      - name: Validate IPA contents
+        run: |
+          unzip -t reseller-native/dist/AccessHub-Reseller-Demo.ipa
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' reseller-native/dist/Payload/AccessHubDemo.app/Info.plist
+          xcrun lipo reseller-native/dist/Payload/AccessHubDemo.app/AccessHubDemo -verify_arch arm64
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Reseller-Demo-iOS
+          path: reseller-native/dist/AccessHub-Reseller-Demo.ipa
+          if-no-files-found: error
