@@ -6,4 +6,4 @@ This repository contains sanitized application sources and automated build instr
 
 The iOS archive is built without a distribution signing identity for installation through an authorized signing workflow. Build artifacts are attached to successful GitHub Actions runs.
 
-The included MIT license and original copyright notice are retained. Desktop components originate from the MIT-licensed IPALOADER project by nab138; the fictional demo wrappers and route restrictions are AccessHub modifications.
+The included MIT license and original copyright notice are retained. Desktop components originate from [iloader by nab138](https://github.com/nab138/iloader), also available at [iloader.app](https://iloader.app). The fictional demo wrappers and route restrictions are independent AccessHub modifications and are not an official iloader release or endorsement. See LICENSE-BRANDING for the original branding notice.

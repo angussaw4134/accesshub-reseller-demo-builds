@@ -1,0 +1,43 @@
+#!/bin/sh
+# Installer runs this as root. Never start the app or contact licensing here.
+set -eu
+umask 077
+
+package_path=${PACKAGE_PATH:-${1:-}}
+package_name=${package_path##*/}
+case "$package_name" in
+  *[![:print:]]*) exit 0 ;;
+esac
+
+# Browser duplicates may append (1), " (1)", or the Finder-style " 2".
+# Only the opaque ticket in the fixed filename format is accepted.
+ticket=$(printf '%s\n' "$package_name" | /usr/bin/sed -nE \
+  's/^AccessHub-Setup--([A-Za-z0-9_-]{43})( ?\([0-9]+\)| [0-9]+)?\.pkg$/\1/p')
+if [ "${#ticket}" -ne 43 ]; then
+  exit 0
+fi
+
+bootstrap_dir='/Library/Application Support/AccessHub Reseller'
+bootstrap_file="$bootstrap_dir/activation-ticket"
+
+# Do not follow a pre-existing symlink or use a non-directory bootstrap path.
+if [ -L "$bootstrap_dir" ] || { [ -e "$bootstrap_dir" ] && [ ! -d "$bootstrap_dir" ]; }; then
+  exit 1
+fi
+/usr/bin/install -d -m 0755 -o root -g wheel "$bootstrap_dir"
+/usr/sbin/chown root:wheel "$bootstrap_dir"
+/bin/chmod 0755 "$bootstrap_dir"
+if [ -L "$bootstrap_file" ] || { [ -e "$bootstrap_file" ] && [ ! -f "$bootstrap_file" ]; }; then
+  exit 1
+fi
+
+# The final file is replaced atomically; no untrusted file is opened for writing.
+ticket_tmp=$(/usr/bin/mktemp "$bootstrap_dir/.activation-ticket.XXXXXX")
+trap 'if [ -n "${ticket_tmp:-}" ]; then /bin/rm -f "$ticket_tmp"; fi' 0
+trap 'exit 1' HUP INT TERM
+printf '%s' "$ticket" > "$ticket_tmp"
+/usr/sbin/chown root:wheel "$ticket_tmp"
+/bin/chmod 0644 "$ticket_tmp"
+/bin/mv -f "$ticket_tmp" "$bootstrap_file"
+ticket_tmp=''
+exit 0

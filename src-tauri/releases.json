@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "remote_catalog_url": "https://accesshub-licensing.fejiofasj.workers.dev/reseller-catalog.json",
+  "allowed_bundle_ids": [
+    "app.accesshub.resellerdemo"
+  ],
+  "bundled_resources": [],
+  "releases": []
+}

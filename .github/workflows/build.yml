@@ -28,3 +28,97 @@ jobs:
           name: Reseller-Demo-iOS
           path: reseller-native/dist/AccessHub-Reseller-Demo.ipa
           if-no-files-found: error
+  desktop:
+    name: Desktop demo loader (${{ matrix.label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: --bundles nsis
+            label: Windows
+          - platform: macos-latest
+            args: --target universal-apple-darwin --bundles app,dmg
+            label: Mac-universal
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          cache-on-failure: true
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.platform == 'windows-latest'
+      - name: Windows native build dependencies
+        if: matrix.platform == 'windows-latest'
+        run: choco install strawberryperl make nasm --no-progress -y
+      - run: npm ci
+      - name: Frontend checks
+        run: npm run build
+      - name: Native safety and catalog checks
+        run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib --features tauri/custom-protocol
+      - name: Package desktop installer
+        run: npm run tauri -- build ${{ matrix.args }} --config src-tauri/ci.conf.json
+      - name: Check Windows installer filename hooks
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: ./src-tauri/windows/test-hooks.ps1
+      - name: Smoke-test Windows installer activation handoff
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packages = @(Get-ChildItem -LiteralPath 'src-tauri/target/release/bundle/nsis' -Filter '*.exe' -File)
+          if ($packages.Count -ne 1) { throw 'Expected one generated Windows installer.' }
+          $ticket = 'TESTONLY_0123456789-ABCDEFGHIJKLMNOPQRSTUVW'
+          if ($ticket.Length -ne 43) { throw 'Invalid smoke-test ticket length.' }
+          $bootstrapDirectory = [IO.Path]::GetFullPath((Join-Path $env:APPDATA 'app.accesshub.resellerloader'))
+          $bootstrap = Join-Path $bootstrapDirectory 'activation-ticket'
+          if (Test-Path -LiteralPath $bootstrap) { throw 'Refusing to overwrite an existing activation bootstrap.' }
+          $smokeDirectory = Join-Path $env:RUNNER_TEMP 'accesshub-reseller-installer-smoke'
+          New-Item -ItemType Directory -Path $smokeDirectory -Force | Out-Null
+          foreach ($suffix in @('', ' (1)')) {
+            $renamed = Join-Path $smokeDirectory ("AccessHub-Setup--$ticket$suffix.exe")
+            Copy-Item -LiteralPath $packages[0].FullName -Destination $renamed
+            $process = Start-Process -FilePath $renamed -ArgumentList '/S' -Wait -PassThru -WindowStyle Hidden
+            if ($process.ExitCode -ne 0) { throw 'Generated Windows installer failed its silent smoke test.' }
+            if (-not (Test-Path -LiteralPath $bootstrap -PathType Leaf)) { throw 'Activation bootstrap was not created.' }
+            if ([IO.File]::ReadAllText($bootstrap) -cne $ticket) { throw 'Activation bootstrap content was incorrect.' }
+            if ((Get-Item -LiteralPath $bootstrap).Length -ne 43) { throw 'Activation bootstrap length was incorrect.' }
+            Remove-Item -LiteralPath $bootstrap
+          }
+          Write-Output 'Generated Windows setup and duplicate filename bootstrap checks passed. The app was not launched.'
+      - name: Build Mac package installer
+        if: matrix.platform == 'macos-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh src-tauri/macos/build-pkg.sh \
+            'src-tauri/target/universal-apple-darwin/release/bundle/macos/AccessHub Reseller.app' \
+            'src-tauri/target/universal-apple-darwin/release/bundle/pkg/AccessHub-Reseller.pkg'
+      - name: Verify Mac package installation and activation handoff
+        if: matrix.platform == 'macos-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh src-tauri/macos/test-pkg.sh \
+            'src-tauri/target/universal-apple-darwin/release/bundle/pkg/AccessHub-Reseller.pkg' \
+            'src-tauri/target/universal-apple-darwin/release/bundle/macos/AccessHub Reseller.app' \
+            1.1.0
+      - name: Save installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: Reseller-Loader-${{ matrix.label }}
+          if-no-files-found: error
+          path: |
+            src-tauri/target/**/release/bundle/**/*.exe
+            src-tauri/target/**/release/bundle/**/*.dmg
+            src-tauri/target/**/release/bundle/**/*.pkg

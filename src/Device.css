@@ -1,0 +1,17 @@
+.device-controls { gap: 10px; }
+.device-summary { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.device-summary-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.device-summary-text strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.device-summary-text > span { color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.device-status-dot { width: 7px; height: 7px; border-radius: 50%; background: #79877e; flex: 0 0 7px; }
+.device-status-dot.connected { background: var(--success, #8cddb8); }
+.setup-controls button.device-refresh { flex: 0 0 auto; padding: 5px 7px; font-size: 10px; border: 1px solid var(--glass-border); background: transparent; }
+.device-picker { display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: var(--text-muted); }
+.device-picker select { width: 100%; font-size: 12px; padding: 8px; }
+.device-error { margin: 0; font-size: 11px; line-height: 1.6; color: var(--danger, #f59b90); white-space: pre-wrap; overflow-wrap: anywhere; }
+.device-spinner { display: inline-block; width: 13px; height: 13px; flex: 0 0 13px; border: 2px solid var(--text-muted); border-right-color: transparent; border-radius: 50%; animation: device-spin 1s linear infinite; }
+.pairing-modal-content { max-width: 340px; }
+.pairing-modal-content h2 { margin: 15px 0 10px; font-size: 20px; }
+.pairing-modal-content p { color: var(--text-muted); font-size: 13px; }
+@keyframes device-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .device-spinner { animation-duration: 2.5s; } }
