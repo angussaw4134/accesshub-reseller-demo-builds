@@ -1,0 +1,15 @@
+plugins { id 'com.android.application' }
+def signing=new Properties()
+def signingPath=System.getenv('RESELLER_SIGNING_PROPERTIES')
+if(signingPath) new File(signingPath).withInputStream { signing.load(it) }
+def signingStore=signingPath ? new File(signing.getProperty('storeFile')) : null
+if(signingStore && !signingStore.isAbsolute()) signingStore=new File(new File(signingPath).getAbsoluteFile().getParentFile(),signing.getProperty('storeFile'))
+android {
+ namespace 'app.accesshub.resellerdemo'
+ compileSdk 35
+ buildToolsVersion '35.0.0'
+ defaultConfig { applicationId 'app.accesshub.resellerdemo'; minSdk 28; targetSdk 35; versionCode 1; versionName '1.0.0' }
+ signingConfigs { reseller { if(signingPath) { storeFile signingStore; storePassword signing.getProperty('storePassword'); keyAlias signing.getProperty('keyAlias'); keyPassword signing.getProperty('keyPassword') } } }
+ buildTypes { release { minifyEnabled false; if(signingPath) signingConfig signingConfigs.reseller } }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
